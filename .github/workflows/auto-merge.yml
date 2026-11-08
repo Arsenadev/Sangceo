@@ -26,15 +26,30 @@ jobs:
             const repo = context.repo.repo;
             const run = context.payload.workflow_run;
 
-            // Payload workflow_run tidak memuat nomor PR untuk PR dari fork,
-            // jadi PR dicari lewat commit head.
-            const { data: kandidat } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner, repo, commit_sha: run.head_sha,
-            });
-            const terbuka = kandidat.find((p) => p.state === 'open');
-            if (!terbuka) return;
+            // Nomor PR dicari lewat head branch. commits/{sha}/pulls tidak menemukan
+            // PR dari fork, jadi jalur itu tidak dipakai.
+            const prDitemukan = await cariPR(run);
+            if (!prDitemukan) return;
+            const pull_number = prDitemukan.number;
 
-            const pull_number = terbuka.number;
+            async function cariPR(run) {
+              const pemilikHead =
+                (run.head_repository && run.head_repository.owner && run.head_repository.owner.login) || owner;
+              try {
+                const { data } = await github.rest.pulls.list({
+                  owner, repo, state: 'open', head: `${pemilikHead}:${run.head_branch}`, per_page: 20,
+                });
+                const cocok = data.find((p) => p.head.sha === run.head_sha);
+                if (cocok) return cocok;
+                if (data.length) return data[0];
+              } catch {}
+              try {
+                const { data } = await github.rest.pulls.list({ owner, repo, state: 'open', per_page: 100 });
+                return data.find((p) => p.head.sha === run.head_sha) || null;
+              } catch {
+                return null;
+              }
+            }
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number });
             if (pr.state !== 'open' || pr.draft) return;
 
