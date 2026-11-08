@@ -1,0 +1,64 @@
+name: Validasi klaim
+
+on:
+  pull_request:
+    paths:
+      - "data/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ambil nama base branch
+        id: base
+        run: echo "sha=$(git merge-base origin/${{ github.base_ref }} HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Validasi file klaim
+        id: val
+        continue-on-error: true
+        run: node scripts/validate.mjs "${{ steps.base.outputs.sha }}" 2>&1 | tee validate.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Komentar di PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('validate.log', 'utf8');
+            const ok = log.includes('lolos validasi');
+            const body = ok
+              ? log.slice(log.indexOf('###'))
+              : log;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body.slice(0, 60000) || 'Validasi tidak menghasilkan keluaran.',
+            });
+      - name: Gagal bila validasi gagal
+        if: steps.val.outcome == 'failure'
+        run: exit 1
+      - name: Tolak otomatis (tutup PR)
+        if: steps.val.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Validasi gagal, jadi PR ini ditutup otomatis. Perbaiki file sesuai catatan di atas, lalu buka PR baru. Perubahan tidak akan pernah aktif lewat PR ini.'
+            });
+            await github.rest.pulls.update({
+              pull_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed'
+            });
