@@ -69,15 +69,10 @@ Lihat kalimat yang muncul di dashboard Vercel, lalu pilih yang sesuai:
    ```
    Hasilnya: `TXT _vercel.sang.ceo`.
 
-Kalau kamu belum yakin Vercel meminta yang mana, tulis dua-duanya. Dua entri di bawah aman
-dipakai bersama, dan Vercel akan menemukan nilainya di tempat yang benar:
-
-```json
-"extra": [
-  { "type": "TXT", "name": "_vercel", "value": "vc-domain-verify=nama.sang.ceo,abc123" },
-  { "type": "TXT", "name": "_vercel", "at": "apex", "value": "vc-domain-verify=nama.sang.ceo,abc123" }
-]
-```
+Pilih satu tempat saja, sesuai yang tertulis di dashboard Vercel. Kalau ternyata salah tempat,
+**ganti** entri itu (tambahkan atau hapus `"at": "apex"`), jangan menambah entri kedua dengan
+nilai yang sama. Dua record berbeda tempat untuk nilai yang sama hanya membuat DNS penuh dan
+membingungkan saat diperiksa.
 
 Batas pengaman: TXT di level zona hanya boleh bernama `_vercel` dan nilainya wajib
 berformat `vc-domain-verify=<domain>,<kode>`. Nilai yang memverifikasi zona `sang.ceo`

@@ -117,9 +117,11 @@ for (const file of changed) {
           // meminta record di level zona, dan itu harus ditulis `at: "apex"`.
           if (x.at !== "apex" && /^vc-domain-verify=[a-z0-9.-]+,[a-z0-9]+$/i.test(String(x.value))) {
             notes.push(
-              `${at}: nilai \`vc-domain-verify=\` ditaruh di bawah subdomain (\`${x.name}.${subdomain}.${ZONE}\`). ` +
-                `Kalau dashboard Vercel menulis "This domain is linked to another Vercel account" dan meminta \`_vercel.${ZONE}\`, ` +
-                `tambahkan \`"at": "apex"\` pada record itu.`
+              `${at}: record ini diletakkan di \`${x.name}.${subdomain}.${ZONE}\`. ` +
+                `Vercel meminta dua tempat berbeda: kalau dashboard menulis "This domain is linked to another Vercel account" ` +
+                `dan menampilkan \`_vercel.${ZONE}\`, recordnya harus di level zona dengan menambahkan \`"at": "apex"\`. ` +
+                `Gantilah entri yang ada (bukan menambah entri kedua): ` +
+                `\`{ "type": "TXT", "name": "${x.name}", "at": "apex", "value": "${x.value}" }\`.`
             );
           }
           if (x.at === "apex") {
