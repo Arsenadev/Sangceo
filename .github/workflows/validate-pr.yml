@@ -19,10 +19,14 @@ jobs:
       - name: Ambil nama base branch
         id: base
         run: echo "sha=$(git merge-base origin/${{ github.base_ref }} HEAD)" >> "$GITHUB_OUTPUT"
+      # Validator dijalankan dari versi base, bukan versi yang dibawa PR, supaya
+      # pembuka PR tidak bisa mengubah aturan validasi lewat PR-nya sendiri.
+      - name: Ambil validator versi base
+        run: git show "${{ steps.base.outputs.sha }}:scripts/validate.mjs" > /tmp/validate.mjs
       - name: Validasi file klaim
         id: val
         continue-on-error: true
-        run: node scripts/validate.mjs "${{ steps.base.outputs.sha }}" 2>&1 | tee validate.log; test ${PIPESTATUS[0]} -eq 0
+        run: node /tmp/validate.mjs "${{ steps.base.outputs.sha }}" 2>&1 | tee validate.log; test ${PIPESTATUS[0]} -eq 0
       # PR dari fork tidak menerima secrets, jadi komentar dan penutupan PR dikerjakan
       # workflow terpisah (pr-feedback.yml) yang membaca hasil ini lewat artifact.
       - name: Simpan hasil validasi
