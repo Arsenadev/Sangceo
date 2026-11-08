@@ -93,6 +93,8 @@ for (const file of changed) {
       if (String(records.CNAME).toLowerCase().startsWith(`${subdomain}.${ZONE}`))
         errors.push(`\`${rel}\`: CNAME tidak boleh menunjuk ke namanya sendiri`);
     }
+    if (data.proxy !== undefined && typeof data.proxy !== "boolean")
+      errors.push(`\`${rel}\`: \`proxy\` harus true atau false`);
     // record tambahan untuk verifikasi penyedia hosting (Vercel, GitHub Pages, Netlify, dsb).
     // Namanya label relatif di bawah subdomain sendiri, mis. "_vercel" -> _vercel.elkaff.sang.ceo
     if (extra !== undefined) {
@@ -109,6 +111,18 @@ for (const file of changed) {
             errors.push(`${at}: \`name\` harus satu label huruf kecil/angka/tanda hubung, boleh diawali \`_\``);
           if (typeof x.value !== "string" || x.value.length === 0 || x.value.length > 500 || /[\r\n]/.test(x.value))
             errors.push(`${at}: \`value\` harus string 1-500 karakter tanpa baris baru`);
+          if (x.at === "apex") {
+            // Record level zona hanya untuk verifikasi kepemilikan subdomain lewat Vercel.
+            // Tanpa batas ini, siapa pun bisa memverifikasi kepemilikan zona sang.ceo itu sendiri.
+            if (x.name !== "_vercel")
+              errors.push(`${at}: \`at: "apex"\` hanya untuk \`name: "_vercel"\``);
+            if (!/^vc-domain-verify=[a-z0-9.-]+,[a-z0-9]+$/i.test(String(x.value)))
+              errors.push(`${at}: nilai level zona harus format Vercel \`vc-domain-verify=<domain>,<kode>\``);
+            if (/^vc-domain-verify=sang\.ceo,/i.test(String(x.value)))
+              errors.push(`${at}: nilai tidak boleh memverifikasi zona sang.ceo itu sendiri`);
+          } else if (x.at !== undefined && x.at !== "sub") {
+            errors.push(`${at}: \`at\` hanya boleh "sub" (default) atau "apex"`);
+          }
         });
       }
     }
