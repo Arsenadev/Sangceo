@@ -34,10 +34,27 @@ Buat `data/emails/<alamat>.json`:
 }
 ```
 
-Setelah PR merge, akun dibuat otomatis dan sandi awal dikirim ke **email akun GitHub
-yang membuka PR** (email publik di profil; bila tidak ada, email author commit).
-Alamat `@users.noreply.github.com` tidak bisa menerima surel, jadi pastikan salah
-satunya asli. Jatah mailbox gratis terbatas 3 akun untuk seluruh zona.
+Setelah PR merge, akun dibuat otomatis dan sandi awal dikirim berurutan ke:
+**email terverifikasi dari login via situs** → field `contact` (bila diisi) →
+**email publik akun GitHub** → **email author commit**. Alamat
+`@users.noreply.github.com` tidak bisa menerima surel, jadi tidak dipakai.
+
+Kalau email GitHub-mu privat, tambahkan field `contact` berisi email penerima sandi:
+
+```json
+{
+  "domain": "sang.ceo",
+  "address": "nama",
+  "type": "mailbox",
+  "owner": "username-github-mu",
+  "contact": "kamu@email-ku.com"
+}
+```
+
+Perhatian: file di repo ini publik, jadi `contact` juga terbaca siapa pun. Tulis
+email yang tidak keberatan dipublikasi, atau login dulu di sang.ceo pakai GitHub
+agar sandi dikirim ke email terverifikasi tanpa perlu menuliskannya di file.
+Jatah mailbox gratis terbatas 3 akun untuk seluruh zona.
 
 ## Aturan singkat
 

@@ -8,11 +8,16 @@ import fs from "node:fs";
 const BASE = process.argv[2]; // contoh: origin/main
 const ZONE = "sang.ceo";
 
-const changed = execSync(`git diff --name-only --diff-filter=ACM ${BASE}...HEAD`, {
+const changedAll = execSync(`git diff --name-only --diff-filter=ACM ${BASE}...HEAD`, {
   encoding: "utf8",
 })
   .split("\n")
-  .filter((f) => f.startsWith("data/") && f.endsWith(".json"));
+  .filter(Boolean);
+
+// JSON di luar data/ adalah kesalahan penempatan yang paling sering terjadi.
+// Jangan dibisukan: beri tahu pembuka PR agar tidak mengulangi kesalahan yang sama.
+const misplaced = changedAll.filter((f) => f.endsWith(".json") && !f.startsWith("data/"));
+const changed = changedAll.filter((f) => f.startsWith("data/") && f.endsWith(".json"));
 
 const NAME_RE = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?)(\.([a-z0-9]([a-z0-9-]*[a-z0-9])?))*$/;
 const EMAIL_RE = /^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$/;
@@ -36,6 +41,31 @@ const existing = {
 
 const errors = [];
 const previews = [];
+
+for (const file of misplaced) {
+  errors.push(
+    `\`${file}\`: posisi file salah. File klaim harus di \`data/domains/<nama>.${ZONE}.json\` atau \`data/emails/<alamat>.json\`. Paling mudah: buat ulang lewat generator di https://${ZONE}/daftar`
+  );
+}
+
+// Sensor utk tampilan: nama -> ja••••el; nilai record: label penyedia tetap terlihat.
+function censorMiddle(s) {
+  if (s.length <= 3) return s[0] + "•" + (s.length > 2 ? s[s.length - 1] : "");
+  return s.slice(0, 2) + "•".repeat(s.length - 4) + s.slice(-2);
+}
+function maskName(name) {
+  return censorMiddle(String(name).trim());
+}
+function maskRecord(value) {
+  const v = String(value).trim();
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) {
+    const o = v.split(".");
+    return `${o[0]}.•••.•••.${o[3]}`;
+  }
+  const labels = v.split(".");
+  if (labels.length <= 2) return censorMiddle(v);
+  return censorMiddle(labels[0]) + "." + labels.slice(1).join(".");
+}
 
 for (const file of changed) {
   const rel = file;
@@ -65,9 +95,9 @@ for (const file of changed) {
     }
     if (!errors.some((e) => e.startsWith(`\`${rel}\``))) {
       const rec = Object.entries(records || {})
-        .map(([t, v]) => `${t} ${Array.isArray(v) ? v.join(", ") : v}`)
+        .map(([t, v]) => `${t} ${Array.isArray(v) ? v.map((x) => maskRecord(String(x))).join(", ") : maskRecord(String(v))}`)
         .join(" · ");
-      previews.push(`| \`${subdomain}.${ZONE}\` | ${owner} | ${data.description || "-"} | ${rec} |`);
+      previews.push(`| \`${maskName(subdomain)}.${ZONE}\` | ${maskName(owner)} | ${data.description || "-"} | ${rec} |`);
     }
   } else if (rel.startsWith("data/emails/")) {
     const { domain, address, owner, type, contact, password } = data;
@@ -80,11 +110,13 @@ for (const file of changed) {
     if (type && type !== "mailbox")
       errors.push(`\`${rel}\`: hanya \`type: "mailbox"\` yang didukung`);
     if (contact && !ADDR_RE.test(contact))
-      errors.push(`\`${rel}\`: \`contact\` tidak dipakai lagi; sandi dikirim ke email akun GitHub pengklaim`);
+      errors.push(`\`${rel}\`: \`contact\` harus alamat email yang valid`);
     if (address && existing.mail.has(address) && !rel.endsWith(`/${address}.json`))
       errors.push(`\`${rel}\`: alamat \`${address}\` sudah diklaim orang lain`);
     if (!errors.some((e) => e.startsWith(`\`${rel}\``))) {
-      previews.push(`| \`${address}@${ZONE}\` | ${owner} | mailbox, sandi ke email akun GitHub |`);
+      previews.push(
+        `| \`${maskName(address)}@${ZONE}\` | ${maskName(owner)} | mailbox, sandi ke ${contact ? "email contact" : "email akun GitHub"} |`
+      );
     }
   }
 }
@@ -97,6 +129,12 @@ if (previews.length > 0) {
           previews.join("\n")
       : "### Pratinjau klaim subdomain\n\n| Subdomain | Pemilik | Deskripsi | Record |\n|---|---|---|---|\n" +
           previews.join("\n")
+  );
+}
+
+if (changed.length === 0 && misplaced.length === 0) {
+  console.log(
+    `Tidak ada file klaim dalam PR ini. Klaim diletakkan di \`data/domains/\` atau \`data/emails/\` — generator: https://${ZONE}/daftar`
   );
 }
 
