@@ -42,6 +42,47 @@ field `extra` di file yang **sudah kamu klaim** — bukan klaim subdomain baru:
 - Hanya `type: "TXT"`, maksimal 10 record, nilai maksimal 500 karakter.
 - Perubahan pada file yang sudah ada juga lewat PR (bukan push langsung).
 
+#### Vercel: dua tempat yang berbeda, jangan sampai tertukar
+
+Vercel meminta TXT di salah satu dari dua tempat, tergantung keadaan domainnya.
+Lihat kalimat yang muncul di dashboard Vercel, lalu pilih yang sesuai:
+
+1. **Domain ditambahkan di proyek milikmu sendiri.** Vercel menampilkan tabel Name dan
+   Value tanpa peringatan apa pun. Nama yang diminta adalah `_vercel`, dan recordnya
+   diletakkan di bawah subdomainmu.
+
+   ```json
+   "extra": [
+     { "type": "TXT", "name": "_vercel", "value": "vc-domain-verify=nama.sang.ceo,abc123" }
+   ]
+   ```
+   Hasilnya: `TXT _vercel.nama.sang.ceo`.
+
+2. **Vercel menulis "This domain is linked to another Vercel account"** dan menyebut
+   recordnya di `_vercel.sang.ceo` (tanpa nama subdomainmu). Recordnya harus di level
+   zona, jadi tambahkan `"at": "apex"`.
+
+   ```json
+   "extra": [
+     { "type": "TXT", "name": "_vercel", "at": "apex", "value": "vc-domain-verify=nama.sang.ceo,abc123" }
+   ]
+   ```
+   Hasilnya: `TXT _vercel.sang.ceo`.
+
+Kalau kamu belum yakin Vercel meminta yang mana, tulis dua-duanya. Dua entri di bawah aman
+dipakai bersama, dan Vercel akan menemukan nilainya di tempat yang benar:
+
+```json
+"extra": [
+  { "type": "TXT", "name": "_vercel", "value": "vc-domain-verify=nama.sang.ceo,abc123" },
+  { "type": "TXT", "name": "_vercel", "at": "apex", "value": "vc-domain-verify=nama.sang.ceo,abc123" }
+]
+```
+
+Batas pengaman: TXT di level zona hanya boleh bernama `_vercel` dan nilainya wajib
+berformat `vc-domain-verify=<domain>,<kode>`. Nilai yang memverifikasi zona `sang.ceo`
+itu sendiri ditolak, supaya tidak ada yang bisa mengambil alih kepemilikan zona.
+
 ## Mailbox
 
 Buat `data/emails/<alamat>.json`:
