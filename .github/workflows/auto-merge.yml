@@ -25,10 +25,16 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const run = context.payload.workflow_run;
-            const prs = run.pull_requests || [];
-            if (!prs.length) return;
 
-            const pull_number = prs[0].number;
+            // Payload workflow_run tidak memuat nomor PR untuk PR dari fork,
+            // jadi PR dicari lewat commit head.
+            const { data: kandidat } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner, repo, commit_sha: run.head_sha,
+            });
+            const terbuka = kandidat.find((p) => p.state === 'open');
+            if (!terbuka) return;
+
+            const pull_number = terbuka.number;
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number });
             if (pr.state !== 'open' || pr.draft) return;
 

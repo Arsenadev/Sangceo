@@ -1,0 +1,66 @@
+name: Umpan balik PR
+
+# Terpisah dari validasi karena PR dari fork tidak menerima secrets. Di sini token
+# tersedia, jadi komentar dan penutupan PR gagal bisa dikerjakan.
+on:
+  workflow_run:
+    workflows: ["Validasi klaim"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  umpan-balik:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ambil log validasi
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: validate-log
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.BOT_TOKEN }}
+      - uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.BOT_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const run = context.payload.workflow_run;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Payload workflow_run tidak memuat nomor PR untuk PR dari fork,
+            // jadi PR dicari lewat commit head.
+            const { data: kandidat } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner, repo, commit_sha: run.head_sha,
+            });
+            const pr = kandidat.find((p) => p.state === 'open');
+            if (!pr) return;
+
+            const number = pr.number;
+            let log = '';
+            try {
+              log = fs.readFileSync('validate.log', 'utf8');
+            } catch {
+              log = 'Validasi tidak menghasilkan log.';
+            }
+            const lolos = log.includes('lolos validasi');
+            const i = log.indexOf('###');
+            const isi = lolos ? (i === -1 ? log : log.slice(i)) : log;
+
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: number,
+              body: (isi || 'Validasi tidak menghasilkan keluaran.').slice(0, 60000),
+            });
+
+            if (!lolos) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: number,
+                body: 'Validasi gagal, jadi PR ini ditutup otomatis. Perbaiki file sesuai catatan di atas, lalu buka PR baru. Perubahan tidak akan pernah aktif lewat PR ini.',
+              });
+              await github.rest.pulls.update({ owner, repo, pull_number: number, state: 'closed' });
+            }
