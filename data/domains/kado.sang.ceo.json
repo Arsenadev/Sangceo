@@ -1,0 +1,8 @@
+{
+  "domain": "sang.ceo",
+  "subdomain": "kado",
+  "owner": "Kadokun404",
+  "records": {
+    "CNAME": "cname.vercel-dns.com"
+  }
+}
