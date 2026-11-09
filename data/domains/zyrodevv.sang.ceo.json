@@ -3,7 +3,7 @@
   "subdomain": "zyrodevv",
   "owner": "GilangRamandan",
   "records": {
-    "CNAME": "cname.vercel-dns.com"
+    "A": "103.190.0.15"
   },
   "proxy": true
 }
