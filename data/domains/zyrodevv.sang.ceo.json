@@ -1,0 +1,9 @@
+{
+  "domain": "sang.ceo",
+  "subdomain": "zyrodevv",
+  "owner": "GilangRamandan",
+  "records": {
+    "CNAME": "cname.vercel-dns.com"
+  },
+  "proxy": true
+}
