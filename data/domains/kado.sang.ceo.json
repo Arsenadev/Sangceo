@@ -4,5 +4,13 @@
   "owner": "Kadokun404",
   "records": {
     "CNAME": "cname.vercel-dns.com"
-  }
+  },
+  "extra": [
+    {
+      "type": "TXT",
+      "name": "_vercel",
+      "value": "vc-domain-verify=kado.sang.ceo,eb7c9c82afe828355671",
+      "at": "apex"
+    }
+  ]
 }
