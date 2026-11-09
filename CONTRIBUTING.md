@@ -108,6 +108,11 @@ Kalau email GitHub-mu privat, tambahkan field `contact` berisi email penerima sa
 }
 ```
 
+Sandi mailbox itu satu-satunya hal yang dikirim ke luar repo, dan alamat penerimanya diambil
+dalam urutan: field `contact` (kalau ada) lalu email akun GitHub pengklaim. Kalau alamat itu
+tidak bisa dipastikan, pengirimannya dibatalkan dan kamu perlu menambahkan `contact` supaya
+sandi dikirim ulang. Jadi jangan biarkan kolom ini kosong kalau email GitHub-mu privat.
+
 Perhatian: file di repo ini publik, jadi `contact` juga terbaca siapa pun. Tulis
 email yang tidak keberatan dipublikasi, atau login dulu di sang.ceo pakai GitHub
 agar sandi dikirim ke email terverifikasi tanpa perlu menuliskannya di file.

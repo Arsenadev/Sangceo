@@ -159,6 +159,15 @@ for (const file of changed) {
       errors.push(`\`${rel}\`: \`contact\` harus alamat email yang valid`);
     if (address && existing.mail.has(address) && !rel.endsWith(`/${address}.json`))
       errors.push(`\`${rel}\`: alamat \`${address}\` sudah diklaim orang lain`);
+    // Tanpa `contact`, pelacakan penerima sandi bergantung pada akun GitHub pengklaim.
+    // Kalau itu gagal, sandi tidak dikirim ke siapa pun, jadi pemilik perlu tahu lebih awal.
+    if (rel.endsWith(`/${address}.json`) && !contact) {
+      notes.push(
+        `\`${rel}\`: belum ada \`contact\`. Sandi mailbox akan dicoba dikirim ke email akun GitHub \`${owner}\`, ` +
+          `dan pengirimannya **dibatalkan** bila alamat itu tidak bisa dipastikan. ` +
+          `Tambahkan \`"contact": "email-kamu@contoh.com"\` supaya sandi pasti sampai ke kamu.`
+      );
+    }
     if (!errors.some((e) => e.startsWith(`\`${rel}\``))) {
       previews.push(
         `| \`${maskName(address)}@${ZONE}\` | ${maskName(owner)} | mailbox, sandi ke ${contact ? "email contact" : "email akun GitHub"} |`
