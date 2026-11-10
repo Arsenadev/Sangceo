@@ -29,5 +29,4 @@ jobs:
       - name: Periksa dan bereskan PR terbuka
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN }}
-          PEMILIK_REPO: ${{ github.repository_owner }}
         run: bash scripts/jaga-pr.sh

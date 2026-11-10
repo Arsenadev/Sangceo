@@ -7,11 +7,10 @@
 #   1. Validasi file klaim lolos.
 #   2. Semua berkas yang berubah ada di data/domains/ atau data/emails/.
 #   3. Field domain, subdomain, owner, address tidak berubah dari versi main.
-#   4. `owner` di setiap berkas sama dengan penulis PR, atau penulisnya pemilik repo.
+#   4. `owner` di setiap berkas sama persis dengan penulis PR. Tanpa pengecualian.
 set -u
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
-PEMILIK_REPO="${PEMILIK_REPO:-Nauvalunesa}"
 BEKU="domain subdomain owner address"
 # Penanda ditulis di komentar bot. Dipakai untuk memastikan bot tidak berkomentar
 # berulang kali, TETAPI tetap menulis ulang bila pesannya sudah tidak sesuai lagi.
@@ -65,6 +64,7 @@ for n in "${DAFTAR[@]}"; do
   # 2. Periksa berkas dan kepemilikan.
   BOLEH=1
   SEBAB=""
+  HAPUS=0
   BERUBAH=$(git diff --name-only "$MB" "$HEAD_SHA")
   for f in $BERUBAH; do
     case "$f" in
@@ -72,11 +72,37 @@ for n in "${DAFTAR[@]}"; do
       *) BOLEH=0; SEBAB="ada berkas di luar data/: $f"; continue ;;
     esac
     if [ ! -f "$f" ]; then
-      BOLEH=0; SEBAB="berkas $f dihapus"; continue
+      # Berkas dihapus. Ini boleh kalau pemiliknya sendiri yang menghapus, dan
+      # hanya untuk berkas SUBDOMAIN. Berkas mailbox tidak boleh dihapus lewat
+      # PR, karena menghapus akun email tidak bisa dikembalikan.
+      case "$f" in
+        data/emails/*)
+          BOLEH=0; SEBAB="berkas mailbox $f tidak boleh dihapus lewat PR"
+          continue
+          ;;
+      esac
+      LAMA_HAPUS=$(git show "$BASE:$f" 2>/dev/null || true)
+      if [ -z "$LAMA_HAPUS" ]; then
+        BOLEH=0; SEBAB="berkas $f dihapus, padahal tidak ada di main"; continue
+      fi
+      OWNER_HAPUS=$(echo "$LAMA_HAPUS" | jq -r '.owner // ""' 2>/dev/null)
+      # Owner kosong atau gagal dibaca berarti tidak bisa dipastikan pemiliknya.
+      # Tanpa pagar ini, penulis PR yang namanya juga kosong akan lolos.
+      if [ -z "$OWNER_HAPUS" ] || [ -z "$AUTHOR" ]; then
+        BOLEH=0; SEBAB="pemilik $f tidak bisa dipastikan, penghapusan ditolak"
+        continue
+      fi
+      if [ "$(echo "$OWNER_HAPUS" | tr '[:upper:]' '[:lower:]')" != "$(echo "$AUTHOR" | tr '[:upper:]' '[:lower:]')" ]; then
+        BOLEH=0; SEBAB="berkas $f milik $OWNER_HAPUS, bukan $AUTHOR"
+      fi
+      HAPUS=1
+      continue
     fi
     OWNER=$(jq -r '.owner // ""' "$f" 2>/dev/null)
-    if [ "$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')" != "$(echo "$AUTHOR" | tr '[:upper:]' '[:lower:]')" ] &&
-       [ "$(echo "$AUTHOR" | tr '[:upper:]' '[:lower:]')" != "$(echo "$PEMILIK_REPO" | tr '[:upper:]' '[:lower:]')" ]; then
+    if [ -z "$OWNER" ] || [ -z "$AUTHOR" ]; then
+      BOLEH=0; SEBAB="pemilik $f tidak bisa dipastikan, perubahan ditolak"; continue
+    fi
+    if [ "$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')" != "$(echo "$AUTHOR" | tr '[:upper:]' '[:lower:]')" ]; then
       BOLEH=0; SEBAB="berkas $f tercatat atas nama $OWNER, bukan $AUTHOR"; continue
     fi
     LAMA=$(git show "$BASE:$f" 2>/dev/null || true)
@@ -96,6 +122,10 @@ for n in "${DAFTAR[@]}"; do
 PR ini ditolak: $SEBAB
 
 Aturannya sederhana: yang boleh mengubah isi berkas klaim hanya akun GitHub yang tercatat sebagai \`owner\` di berkas itu. Ini yang mencegah orang lain mengambil alih klaim bukan miliknya.
+
+Catatan soal menghapus klaim:
+- Boleh menghapus klaim **subdomain** milikmu sendiri. Berkasnya hilang dari main, dan record DNS-nya ikut dibersihkan oleh sinkronisasi.
+- Berkas **mailbox tidak boleh dihapus lewat PR**, karena menghapus akun email tidak bisa dikembalikan. Ajukan lewat issue kalau memang perlu.
 
 Kalau kamu memang pemiliknya tetapi memakai akun berbeda, kirim ulang dari akun yang sama dengan \`owner\`. Kalau \`owner\` di berkas itu salah catat, tulis di issue supaya dibetulkan pemelihara.
 
