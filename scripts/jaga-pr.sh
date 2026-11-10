@@ -13,7 +13,11 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 
 PEMILIK_REPO="${PEMILIK_REPO:-Nauvalunesa}"
 BEKU="domain subdomain owner address"
-MARK_MISMATCH="<!-- jaga-pr:mismatch -->"
+# Penanda ditulis di komentar bot. Dipakai untuk memastikan bot tidak berkomentar
+# berulang kali, TETAPI tetap menulis ulang bila pesannya sudah tidak sesuai lagi.
+# Penanda beda untuk tiap sebab, jadi perubahan aturan tidak meninggalkan pesan basi.
+MARK_DITOLAK="<!-- jaga-pr:ditolak -->"
+MARK_TINJAU="<!-- jaga-pr:tinjau -->"
 
 git config --global --add safe.directory "$PWD" 2>/dev/null || true
 git fetch -q origin main || exit 1
@@ -87,15 +91,15 @@ for n in "${DAFTAR[@]}"; do
 
   if [ "$BOLEH" -eq 0 ]; then
     echo "    ditolak: $SEBAB"
-    if ! sudah_komentar "$n" "$MARK_MISMATCH"; then
-      komentar "$n" "$MARK_MISMATCH
+    if ! sudah_komentar "$n" "$MARK_DITOLAK"; then
+      komentar "$n" "$MARK_DITOLAK
 PR ini ditolak: $SEBAB
 
 Aturannya sederhana: yang boleh mengubah isi berkas klaim hanya akun GitHub yang tercatat sebagai \`owner\` di berkas itu. Ini yang mencegah orang lain mengambil alih klaim bukan miliknya.
 
 Kalau kamu memang pemiliknya tetapi memakai akun berbeda, kirim ulang dari akun yang sama dengan \`owner\`. Kalau \`owner\` di berkas itu salah catat, tulis di issue supaya dibetulkan pemelihara.
 
-PR ini ditutup. Perubahan tidak akan pernah aktif lewat PR ini."
+PR ini ditutup dan perubahan di dalamnya tidak akan pernah aktif. Kalau salah satu poin di atas tidak jelas, tulis di issue."
     fi
     gh pr close "$n" >/dev/null 2>&1 || true
     continue
