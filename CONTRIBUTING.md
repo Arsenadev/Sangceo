@@ -3,6 +3,27 @@
 Satu klaim = satu file JSON = satu pull request. Jangan menaruh password atau data
 pribadi di file mana pun: repo ini publik.
 
+
+## Mengganti tipe record (CNAME ke A, atau sebaliknya)
+
+Type record ditentukan oleh field `records` di berkasmu. Satu nama DNS hanya boleh punya
+satu CNAME atau satu A, tidak boleh dua-duanya sekaligus. Jadi kalau kamu berpindah dari
+Vercel ke server sendiri:
+
+```json
+{
+  "domain": "sang.ceo",
+  "subdomain": "namamu",
+  "owner": "username-github-mu",
+  "records": { "A": "103.190.0.15" },
+  "proxy": false
+}
+```
+
+Cukup ganti isi `records` dari CNAME menjadi A. Record CNAME yang lama akan dihapus otomatis
+oleh sinkronisasi, jadi kamu tidak perlu menunggu tindakan pemelihara. Kalau setelah
+sinkronisasi record A belum muncul, tulis di issue, jangan menambah entri kedua.
+
 ## Subdomain
 
 Buat `data/domains/<nama>.sang.ceo.json`:
