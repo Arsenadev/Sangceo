@@ -5,5 +5,5 @@
   "records": {
     "A": "103.190.0.15"
   },
-  "proxy": true
+  "proxy": false
 }
