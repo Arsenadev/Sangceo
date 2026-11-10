@@ -86,13 +86,18 @@ for n in "${DAFTAR[@]}"; do
   done
 
   if [ "$BOLEH" -eq 0 ]; then
-    echo "    tidak bisa otomatis: $SEBAB"
+    echo "    ditolak: $SEBAB"
     if ! sudah_komentar "$n" "$MARK_MISMATCH"; then
       komentar "$n" "$MARK_MISMATCH
-Merge otomatis belum bisa dijalankan: $SEBAB.
+PR ini ditolak: $SEBAB
 
-PR ini dibiarkan terbuka untuk ditinjau manusia. Perubahan yang bisa diterima: menambah atau mengubah **record** pada berkas yang sudah kamu klaim (field \`extra\`, \`records\`, \`description\`, \`proxy\`) tanpa mengubah \`domain\`, \`subdomain\`, \`owner\`, atau \`address\`."
+Aturannya sederhana: yang boleh mengubah isi berkas klaim hanya akun GitHub yang tercatat sebagai \`owner\` di berkas itu. Ini yang mencegah orang lain mengambil alih klaim bukan miliknya.
+
+Kalau kamu memang pemiliknya tetapi memakai akun berbeda, kirim ulang dari akun yang sama dengan \`owner\`. Kalau \`owner\` di berkas itu salah catat, tulis di issue supaya dibetulkan pemelihara.
+
+PR ini ditutup. Perubahan tidak akan pernah aktif lewat PR ini."
     fi
+    gh pr close "$n" >/dev/null 2>&1 || true
     continue
   fi
 

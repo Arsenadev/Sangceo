@@ -4,6 +4,22 @@ Satu klaim = satu file JSON = satu pull request. Jangan menaruh password atau da
 pribadi di file mana pun: repo ini publik.
 
 
+## Siapa yang boleh mengubah sebuah klaim
+
+Isi berkas klaim hanya boleh diubah oleh akun GitHub yang tercatat sebagai `owner` di berkas
+itu. Bukan "kira-kira sama", tapi harus sama persis dengan login akun yang mengirim pull
+request.
+
+Kalau kamu memakai dua akun dan mengirim PR dari akun yang bukan `owner`, PR itu ditolak
+otomatis dan ditutup, dengan alasan yang dituliskan di kolom komentar. Solusinya salah satu
+dari ini:
+
+- kirim ulang PR-nya dari akun yang sama dengan `owner`, atau
+- kalau `owner` di berkas itu salah catat, tulis di issue supaya pemelihara membetulkannya
+
+Aturan ini yang menjaga supaya tidak ada orang yang bisa mengubah atau menghapus klaim milik
+orang lain hanya dengan mengirim pull request.
+
 ## Mengganti tipe record (CNAME ke A, atau sebaliknya)
 
 Type record ditentukan oleh field `records` di berkasmu. Satu nama DNS hanya boleh punya
