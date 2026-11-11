@@ -86,6 +86,21 @@ for (const file of changed) {
     if (!owner) errors.push(`\`${rel}\`: \`owner\` (username GitHub) wajib`);
     if (!records || typeof records !== "object" || Object.keys(records).length === 0)
       errors.push(`\`${rel}\`: \`records\` wajib berisi minimal satu record`);
+    // Pagar tipe record. Generator DNS (gen-dnsconfig.mjs) hanya memetakan tipe di
+    // daftar ini. Tipe di luar daftar akan LOLOS validator tetapi DIABAIKAN oleh
+    // generator, jadi recordnya tidak pernah sampai ke DNS. Lebih baik ditolak di
+    // sini dengan pesan jelas daripada pemiliknya menunggu record yang tidak ada.
+    const TIPE_DIDUKUNG = ["A", "AAAA", "CAA", "CNAME", "MX", "NS", "SRV", "TXT"];
+    for (const tipe of Object.keys(records || {})) {
+      if (!TIPE_DIDUKUNG.includes(tipe))
+        errors.push(
+          `\`${rel}\`: tipe record \`${tipe}\` belum dipetakan generator DNS, jadi tidak akan pernah aktif. ` +
+            `Tipe yang didukung: ${TIPE_DIDUKUNG.join(", ")}.`
+        );
+    }
+    // CNAME harus satu-satunya record pada namanya, aturan DNS.
+    if (records?.CNAME && Object.keys(records).length > 1)
+      errors.push(`\`${rel}\`: \`CNAME\` harus satu-satunya record. Hapus tipe lain, atau ganti CNAME menjadi A/AAAA.`);
     if (subdomain && existing.sub.has(subdomain) && !rel.endsWith(`/${subdomain}.${ZONE}.json`))
       errors.push(`\`${rel}\`: subdomain \`${subdomain}\` sudah diklaim orang lain`);
     if (subdomain && records?.CNAME && NAME_RE.test(subdomain)) {
