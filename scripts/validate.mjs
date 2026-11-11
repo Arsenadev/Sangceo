@@ -105,6 +105,30 @@ for (const file of changed) {
             `Tipe yang didukung: ${TIPE_DIDUKUNG.join(", ")}.`
         );
     }
+    // Bentuk isi record. Sebelum ini hanya CNAME yang diperiksa bentuknya, jadi
+    // A/AAAA/TXT/SRV/CAA lolos apa saja. Alamat seperti 999.1.1.1 dianggap sah,
+    // di-merge, lalu ditolak Cloudflare saat push, dan karena DNSControl menolak
+    // seluruh berkas begitu ada satu nilai salah, record orang lain ikut gagal.
+    const nilaiTunggal = (v) => (Array.isArray(v) ? v : [v]).map((x) => String(x ?? "").trim());
+    const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
+    for (const [tipeCek, nilaiCek] of Object.entries(records || {})) {
+      for (const v of nilaiTunggal(nilaiCek)) {
+        if (v === "") {
+          errors.push(`\`${rel}\`: record \`${tipeCek}\` kosong`);
+          continue;
+        }
+        if (tipeCek === "A" && (!IPV4_RE.test(v) || v.split(".").some((o) => Number(o) > 255)))
+          errors.push(`\`${rel}\`: A berisi \`${v}\`, sedangkan isinya harus alamat IPv4 yang sah, mis. \`76.76.21.21\``);
+        if (tipeCek === "AAAA" && !/^[0-9a-f:]+$/i.test(v))
+          errors.push(`\`${rel}\`: AAAA berisi \`${v}\`, sedangkan isinya harus alamat IPv6, mis. \`2606:4700::6810:84e5\``);
+        if (tipeCek === "TXT" && v.length > 2000)
+          errors.push(`\`${rel}\`: TXT \`${v.slice(0, 20)}…\` terlalu panjang (${v.length} karakter, maksimal 2000)`);
+        if (tipeCek === "SRV" && !/^\d{1,5}\s+\d{1,5}\s+\d{1,5}\s+[a-z0-9.-]+$/i.test(v))
+          errors.push(`\`${rel}\`: SRV \`${v}\` harus berbentuk "prioritas bobot port target", mis. \`10 5 443 contoh.com\``);
+        if (tipeCek === "CAA" && !/^\d{1,3}\s+(issue|issuewild|iodef)\s+\S+$/i.test(v))
+          errors.push(`\`${rel}\`: CAA \`${v}\` harus berbentuk "flag tag nilai", mis. \`0 issue letsencrypt.org\``);
+      }
+    }
     // CNAME harus satu-satunya record pada namanya, aturan DNS.
     if (records?.CNAME && Object.keys(records).length > 1)
       errors.push(`\`${rel}\`: \`CNAME\` harus satu-satunya record. Hapus tipe lain, atau ganti CNAME menjadi A/AAAA.`);
