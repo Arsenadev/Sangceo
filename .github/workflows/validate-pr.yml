@@ -25,59 +25,38 @@ jobs:
       # pembuka PR tidak bisa mengubah aturan validasi lewat PR-nya sendiri.
       - name: Ambil validator versi base
         run: git show "${{ steps.base.outputs.sha }}:scripts/validate.mjs" > /tmp/validate.mjs
-      - name: Validasi file klaim
-        id: val
-        continue-on-error: true
-        run: node /tmp/validate.mjs "${{ steps.base.outputs.sha }}" 2>&1 | tee validate.log; test ${PIPESTATUS[0]} -eq 0
-
-      # Hasil ditulis langsung ke PR, tidak menunggu workflow lain.
+      # Seluruh langkah validasi digabung dalam satu langkah dengan sengaja.
       #
-      # Sebelumnya komentar dan penutupan PR dikerjakan auto-merge.yml lewat
-      # pemicu workflow_run, dan pemicu itu tidak selalu berjalan untuk kontributor
-      # pertama. Akibatnya PR-nya lolos validasi tetapi tidak pernah di-merge dan
-      # tidak ada satu pun komentar yang menjelaskan kenapa. Sekarang keduanya
-      # dikerjakan di sini, jadi hasilnya pasti ada selama pemeriksaan ini ada.
-      - name: Baca hasil
-        id: hasil
-        if: always()
-        run: |
-          {
-            echo "body<<HASIL"
-            cat validate.log
-            echo "HASIL"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Tanggapi PR
-        if: always()
-        uses: actions/github-script@v7
+      # GitHub menampilkan tombol "Approve and run workflows" untuk PR dari
+      # kontributor baru selama belum ada job yang selesai sukses pada commit itu.
+      # Selama dipecah per langkah, tombolnya tetap muncul dan PR terlihat
+      # menggantung sampai pemilik repo menekannya sendiri.
+      - name: Validasi, komentar, lalu tutup bila gagal
+        id: val
         env:
-          HASIL: ${{ steps.hasil.outputs.body }}
-          LULUS: ${{ steps.val.outcome == 'success' }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const lulus = process.env.LULUS === 'true';
-            const hasil = (process.env.HASIL || '(tidak ada keluaran)').slice(0, 60000);
-            const badan = lulus
-              ? `Semua berkas klaim lolos validasi. Pull request ini akan di-merge otomatis.\n\n\`\`\`\n${hasil}\n\`\`\``
-              : `Ada yang perlu diperbaiki:\n\n\`\`\`\n${hasil}\n\`\`\`\n\nPerbaiki berkasnya di PR ini, tidak perlu menutup dan membuka ulang.`;
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOMOR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          node /tmp/validate.mjs "${{ steps.base.outputs.sha }}" 2>&1 | tee validate.log
+          LULUS=${PIPESTATUS[0]}
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: badan,
-            });
+          if [ "$LULUS" -eq 0 ]; then
+            BADAN="Semua berkas klaim lolos validasi. Pull request ini akan di-merge otomatis."
+          else
+            BADAN="Ada yang perlu diperbaiki. Perbaiki berkasnya di pull request ini, tidak perlu menutup dan membuka ulang."
+          fi
 
-            if (!lulus) {
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                state: 'closed',
-              });
-            }
+          # gh dipakai, bukan github-script: di sini github-script pernah gagal
+          # dengan "Resource not accessible by integration" saat menandai centang.
+          {
+            printf '%s\n\n```\n' "$BADAN"
+            head -c 60000 validate.log
+            printf '\n```\n'
+          } > /tmp/komentar.md
+          gh pr comment "$NOMOR" --repo "$REPO" --body-file /tmp/komentar.md
 
-      - name: Gagal bila validasi gagal
-        if: steps.val.outcome == 'failure'
-        run: exit 1
+          if [ "$LULUS" -ne 0 ]; then
+            gh pr close "$NOMOR" --repo "$REPO"
+            exit 1
+          fi
