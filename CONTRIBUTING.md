@@ -20,6 +20,28 @@ dari ini:
 Aturan ini yang menjaga supaya tidak ada orang yang bisa mengubah atau menghapus klaim milik
 orang lain hanya dengan mengirim pull request.
 
+### Tipe record yang didukung
+
+Lewat web di <https://sang.ceo/kelola> kamu bisa memakai: `A`, `AAAA`, `CNAME`, `TXT`, `SRV`, `CAA`.
+Lewat pull request manual, dua tipe tambahan tersedia: `MX` dan `NS`.
+
+Tipe di luar daftar itu akan **ditolak** validator. Bukan karena aturan sewenang-wenang:
+generator DNS yang dipakai server hanya memetakan tipe-tipe itu, sehingga tipe lain akan
+lolos review lalu diabaikan diam-diam dan recordnya tidak pernah aktif.
+
+Ingin tipe lain, misalnya `PTR` atau `DNAME`? Tulis di issue supaya generatornya ditambah
+lebih dulu. Jangan kirim PR dengan tipe yang belum dipetakan.
+
+Satu tipe boleh punya beberapa nilai, misalnya dua record `A` untuk dua server. Cukup
+jadikan nilainya array:
+
+```json
+{ "records": { "A": ["103.190.0.15", "103.190.0.16"] } }
+```
+
+`CNAME` tidak bisa seperti itu. CNAME harus satu-satunya record pada namanya, jadi mencampur
+CNAME dengan tipe lain ditolak.
+
 ## Mengganti tipe record (CNAME ke A, atau sebaliknya)
 
 Type record ditentukan oleh field `records` di berkasmu. Satu nama DNS hanya boleh punya
