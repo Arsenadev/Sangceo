@@ -20,6 +20,7 @@ const misplaced = changedAll.filter((f) => f.endsWith(".json") && !f.startsWith(
 const changed = changedAll.filter((f) => f.startsWith("data/") && f.endsWith(".json"));
 
 const NAME_RE = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?)(\.([a-z0-9]([a-z0-9-]*[a-z0-9])?))*$/;
+const HOST_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i;
 const EMAIL_RE = /^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$/;
 const ADDR_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -114,6 +115,13 @@ for (const file of changed) {
         errors.push(`\`${rel}\`: CNAME harus berupa string tunggal`);
       if (String(records.CNAME).toLowerCase().startsWith(`${subdomain}.${ZONE}`))
         errors.push(`\`${rel}\`: CNAME tidak boleh menunjuk ke namanya sendiri`);
+      const target = String(records.CNAME).replace(/\.$/, "");
+      if (/[:/\s]/.test(target))
+        errors.push(
+          `\`${rel}\`: CNAME berisi \`${target}\`, sedangkan isinya harus nama host saja tanpa \`http://\` dan tanpa garis miring, mis. \`www.contoh.id\``
+        );
+      else if (!HOST_RE.test(target))
+        errors.push(`\`${rel}\`: CNAME \`${target}\` bukan nama host yang sah, mis. \`www.contoh.id\``);
     }
     if (data.proxy !== undefined && typeof data.proxy !== "boolean")
       errors.push(`\`${rel}\`: \`proxy\` harus true atau false`);
