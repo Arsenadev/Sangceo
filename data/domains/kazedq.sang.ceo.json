@@ -1,0 +1,9 @@
+{
+  "domain": "sang.ceo",
+  "subdomain": "kazedq",
+  "owner": "kagazuki",
+  "records": {
+    "CNAME": "kagazuki.github.io"
+  },
+  "proxy": false
+}
