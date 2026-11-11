@@ -20,7 +20,17 @@ dari ini:
 Aturan ini yang menjaga supaya tidak ada orang yang bisa mengubah atau menghapus klaim milik
 orang lain hanya dengan mengirim pull request.
 
-### Tipe record yang didukung
+### Batas subdomain per akun
+
+Satu akun GitHub boleh memegang **paling banyak 3 subdomain**. Batas ini ditegakkan
+di dua tempat dengan angka yang sama: `scripts/validate.mjs` untuk pull request
+manual, dan `/kelola` untuk jalur web. Kalau ingin menambah yang keempat,
+lepaskan salah satu dulu lewat <https://sang.ceo/kelola>, baru klaim yang baru.
+
+Turunan seperti `api.nama-mu.sang.ceo` dan wildcard `*.nama-mu.sang.ceo` tidak
+dihitung terpisah, karena itu bagian dari subdomain yang sama.
+
+## Tipe record yang didukung
 
 `A`, `AAAA`, `CNAME`, `TXT`, `SRV`, `CAA`.
 

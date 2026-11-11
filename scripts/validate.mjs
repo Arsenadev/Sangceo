@@ -197,6 +197,56 @@ for (const file of changed) {
   }
 }
 
+// Satu pemilik boleh memegang paling banyak 3 subdomain. Dihitung dari seluruh
+// isi data/domains pada keadaan PR ini, bukan hanya berkas yang berubah, supaya
+// PR berisi beberapa berkas tidak bisa dipakai melewati batas.
+const BATAS_SUBDOMAIN = 3;
+{
+  const bacaIsi = (rel) => {
+    try {
+      return JSON.parse(fs.readFileSync(rel, "utf8"));
+    } catch {
+      return null;
+    }
+  };
+
+  // Pemilik yang berkasnya ikut di PR ini. Hanya mereka yang diperiksa, supaya
+  // PR orang lain tidak ikut ditutup gara-gara ada akun yang sudah lewat batas
+  // sebelum aturan ini ada.
+  const terlibat = new Set();
+  for (const rel of changed.filter((f) => f.startsWith("data/domains/"))) {
+    const isi = bacaIsi(rel);
+    const siapa = String(isi?.owner || "").toLowerCase();
+    if (siapa) terlibat.add(siapa);
+  }
+
+  const milik = new Map();
+  let semua = [];
+  try {
+    semua = fs.readdirSync("data/domains").filter((f) => f.endsWith(".json"));
+  } catch {
+    semua = [];
+  }
+  for (const nama of semua) {
+    const isi = bacaIsi(`data/domains/${nama}`);
+    if (!isi) continue;
+    const siapa = String(isi.owner || "").toLowerCase();
+    if (!siapa || siapa === "unknown") continue;
+    if (!milik.has(siapa)) milik.set(siapa, []);
+    milik.get(siapa).push(isi.subdomain || nama);
+  }
+
+  for (const siapa of terlibat) {
+    const daftar = milik.get(siapa) || [];
+    if (daftar.length > BATAS_SUBDOMAIN)
+      errors.push(
+        `Akun \`${siapa}\` memegang ${daftar.length} subdomain (${daftar
+          .map((n) => `\`${n}\``)
+          .join(", ")}), sedangkan batasnya ${BATAS_SUBDOMAIN} per akun. Lepaskan salah satunya lewat https://${ZONE}/kelola, lalu kirim PR ini lagi.`
+      );
+  }
+}
+
 if (previews.length > 0) {
   const isMail = previews[0].includes("@");
   console.log(
