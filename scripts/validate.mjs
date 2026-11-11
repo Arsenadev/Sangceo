@@ -90,8 +90,14 @@ for (const file of changed) {
     // daftar ini. Tipe di luar daftar akan LOLOS validator tetapi DIABAIKAN oleh
     // generator, jadi recordnya tidak pernah sampai ke DNS. Lebih baik ditolak di
     // sini dengan pesan jelas daripada pemiliknya menunggu record yang tidak ada.
-    const TIPE_DIDUKUNG = ["A", "AAAA", "CAA", "CNAME", "MX", "NS", "SRV", "TXT"];
+    const TIPE_DIDUKUNG = ["A", "AAAA", "CAA", "CNAME", "SRV", "TXT"];
+    // Dua tipe ini sengaja tidak dipakai, dan alasannya beda dari tipe tak dikenal.
+    const TIPE_DILARANG = { MX: "MX mengarahkan surat masuk, salah isi bisa membelokkan surat orang", NS: "NS bisa mengambil alih seluruh zona" };
     for (const tipe of Object.keys(records || {})) {
+      if (TIPE_DILARANG[tipe]) {
+        errors.push(`\`${rel}\`: tipe \`${tipe}\` tidak dipakai di registry ini. ${TIPE_DILARANG[tipe]}.`);
+        continue;
+      }
       if (!TIPE_DIDUKUNG.includes(tipe))
         errors.push(
           `\`${rel}\`: tipe record \`${tipe}\` belum dipetakan generator DNS, jadi tidak akan pernah aktif. ` +

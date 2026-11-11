@@ -22,15 +22,23 @@ orang lain hanya dengan mengirim pull request.
 
 ### Tipe record yang didukung
 
-Lewat web di <https://sang.ceo/kelola> kamu bisa memakai: `A`, `AAAA`, `CNAME`, `TXT`, `SRV`, `CAA`.
-Lewat pull request manual, dua tipe tambahan tersedia: `MX` dan `NS`.
+`A`, `AAAA`, `CNAME`, `TXT`, `SRV`, `CAA`.
 
-Tipe di luar daftar itu akan **ditolak** validator. Bukan karena aturan sewenang-wenang:
-generator DNS yang dipakai server hanya memetakan tipe-tipe itu, sehingga tipe lain akan
-lolos review lalu diabaikan diam-diam dan recordnya tidak pernah aktif.
+Daftar ini **sama persis** untuk dua jalur: web di <https://sang.ceo/kelola> dan pull request
+manual di GitHub. Tidak ada tipe yang hanya bisa satu jalur. Jadi apa pun yang bisa kamu ubah
+lewat web, bisa juga kamu ubah lewat PR, dan sebaliknya.
 
-Ingin tipe lain, misalnya `PTR` atau `DNAME`? Tulis di issue supaya generatornya ditambah
-lebih dulu. Jangan kirim PR dengan tipe yang belum dipetakan.
+Dua tipe sengaja tidak dipakai, dengan alasan masing-masing:
+
+- `MX` mengarahkan surat masuk. Salah isi berarti surat pemilik klaim bisa jatuh ke pihak lain.
+- `NS` bisa mengambil alih seluruh zona.
+
+Tipe di luar daftar akan **ditolak** validator. Bukan karena aturan sewenang-wenang: generator
+DNS yang dipakai server hanya memetakan tipe-tipe itu, sehingga tipe lain akan lolos review lalu
+diabaikan diam-diam dan recordnya tidak pernah aktif.
+
+Ingin tipe lain, misalnya `PTR` atau `DNAME`? Tulis di issue supaya generatornya ditambah lebih
+dulu. Jangan kirim PR dengan tipe yang belum dipetakan.
 
 Satu tipe boleh punya beberapa nilai, misalnya dua record `A` untuk dua server. Cukup
 jadikan nilainya array:
