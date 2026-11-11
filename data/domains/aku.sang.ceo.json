@@ -7,9 +7,10 @@
   },
   "extra": [
     {
-      "type": "TXT",
-      "name": "_vercel",
-      "value": "vc-domain-verify=aku.sang.ceo,b046dcc774db6b065e41"
+  "type": "TXT",
+  "name": "_vercel",
+  "at": "apex",
+  "value": "vc-domain-verify=aku.sang.ceo,b046dcc774db6b065e41"
     }
   ]
 }
