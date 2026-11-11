@@ -62,14 +62,22 @@ jobs:
             const files = await github.paginate(github.rest.pulls.listFiles, {
               owner, repo, pull_number, per_page: 100,
             });
-            if (!files.length) return;
+            if (!files.length) {
+              await tolak('pull request ini tidak mengubah berkas klaim mana pun');
+              return;
+            }
 
-            const tolak = async (sebab, tulisKomentar = true) => {
-              if (!tulisKomentar) return;
+            // Keputusan selalu diambil di sini, tidak ada yang digantung menunggu
+            // manusia. PR yang tidak lolos syarat ditutup dengan alasannya, jadi
+            // pengirimnya tahu persis apa yang kurang dan bisa mengirim ulang.
+            const tolak = async (sebab) => {
               await github.rest.issues.createComment({
                 owner, repo, issue_number: pull_number,
-                body: `Merge otomatis dilewati: ${sebab}\n\nMenunggu tinjauan manusia.`,
+                body: `Pull request ini ditutup otomatis: ${sebab}\n\nPerbaiki berkasnya lalu kirim ulang pull request baru, atau tulis di issue kalau menurutmu ini keliru.`,
               });
+              try {
+                await github.rest.pulls.update({ owner, repo, pull_number, state: 'closed' });
+              } catch {}
             };
 
             const diLuar = files.filter((f) => !PATOK.test(f.filename));
@@ -78,18 +86,37 @@ jobs:
               return;
             }
 
-            const hapus = files.filter((f) => f.status === 'removed');
-            if (hapus.length) {
-              await tolak(`ada berkas yang dihapus (${hapus.map((f) => `\`${f.filename}\``).join(', ')})`);
-              return;
-            }
-
             const baca = async (path, ref) => {
               const { data } = await github.rest.repos.getContent({ owner, repo, path, ref });
               return JSON.parse(Buffer.from(data.content, 'base64').toString('utf8'));
             };
 
+            const hapus = files.filter((f) => f.status === 'removed');
+            for (const f of hapus) {
+              // Menghapus akun email tidak pernah otomatis: surat yang sudah
+              // terhapus tidak bisa dikembalikan.
+              if (!f.filename.startsWith('data/domains/')) {
+                await tolak(`\`${f.filename}\` tidak boleh dihapus lewat jalur otomatis`);
+                return;
+              }
+              // Yang boleh dihapus hanya klaim milik pengirimnya sendiri, jadi
+              // yang diperiksa adalah isi berkas sebelum dihapus.
+              let lama;
+              try {
+                lama = await baca(f.filename, pr.base.sha);
+              } catch {
+                await tolak(`versi lama \`${f.filename}\` tidak bisa dibaca`);
+                return;
+              }
+              if (String(lama.owner || '').toLowerCase() !== author) {
+                await tolak(`\`${f.filename}\` tercatat atas nama \`${lama.owner || 'unknown'}\`, bukan \`${pr.user.login}\``);
+                return;
+              }
+            }
+
             for (const f of files) {
+              // Berkas yang dihapus sudah diperiksa di atas.
+              if (f.status === 'removed') continue;
               let baru;
               try {
                 baru = await baca(f.filename, pr.head.sha);
